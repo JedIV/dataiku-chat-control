@@ -145,3 +145,42 @@ def get_job_log(client, project_key: str, job_id: str) -> str:
     project = client.get_project(project_key)
     job = project.get_job(job_id)
     return job.get_log()
+
+
+def compute_and_apply_schema(client, project_key: str, recipe_name: str) -> dict:
+    """Compute and apply schema updates for a recipe.
+
+    This is required after creating or modifying a recipe before building.
+    Without this, builds will fail with missing column errors.
+
+    Args:
+        client: DSSClient instance
+        project_key: Project key
+        recipe_name: Recipe name
+
+    Returns:
+        dict with keys: success, updates_applied, details
+    """
+    project = client.get_project(project_key)
+    recipe = project.get_recipe(recipe_name)
+
+    try:
+        schema_updates = recipe.compute_schema_updates()
+
+        # Check if there are updates to apply
+        updates_info = schema_updates.new_output_schemas if hasattr(schema_updates, 'new_output_schemas') else {}
+
+        # Apply the updates
+        schema_updates.apply()
+
+        return {
+            "success": True,
+            "updates_applied": True,
+            "details": f"Schema updates applied for recipe {recipe_name}"
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "updates_applied": False,
+            "details": str(e)
+        }

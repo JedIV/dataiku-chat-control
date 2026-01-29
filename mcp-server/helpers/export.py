@@ -22,7 +22,20 @@ def to_records(client, project_key: str, dataset_name: str,
     project = client.get_project(project_key)
     dataset = project.get_dataset(dataset_name)
 
-    rows = list(dataset.iter_rows(limit=limit))
+    # Get schema to build dicts (iter_rows returns lists, not dicts)
+    settings = dataset.get_settings()
+    schema = settings.get_raw().get("schema", {}).get("columns", [])
+    col_names = [col.get("name") for col in schema]
+
+    rows = []
+    for i, row in enumerate(dataset.iter_rows()):
+        if i >= limit:
+            break
+        # Convert list to dict
+        if isinstance(row, dict):
+            rows.append(row)
+        else:
+            rows.append(dict(zip(col_names, row)))
     return rows
 
 

@@ -40,7 +40,7 @@ with a pre-configured Dataiku client.
 
 Available in the execution namespace:
 - client: Authenticated DSSClient instance
-- helpers.jobs: Build/scenario waiting (build_and_wait, run_scenario_and_wait)
+- helpers.jobs: Build/scenario waiting (build_and_wait, run_scenario_and_wait, compute_and_apply_schema)
 - helpers.inspection: Data exploration (dataset_info, project_summary)
 - helpers.search: Cross-project search (find_datasets, find_by_connection)
 - helpers.export: Data extraction (to_records, sample, head)
@@ -57,6 +57,16 @@ Example:
     from helpers.jobs import build_and_wait
     result = build_and_wait(client, "MY_PROJECT", "my_dataset")
     print(result)
+
+IMPORTANT: After creating or modifying a recipe, you MUST compute and apply schema
+before building, or the build will fail with missing column errors:
+    from helpers.jobs import compute_and_apply_schema
+    compute_and_apply_schema(client, "PROJECT", "recipe_name")
+
+IMPORTANT: When joining datasets, output columns get prefixed with the input dataset
+name and double underscore. For example, joining 'crm' and 'web' datasets:
+- 'web.ip' becomes 'web__ip' (double underscore)
+- 'crm.customer_id' stays 'customer_id' (left table keeps original names)
 """
 )
 
@@ -137,6 +147,7 @@ def list_helpers() -> str:
     output.append("  run_recipe_and_wait(client, project_key, recipe_name, timeout=600)")
     output.append("  wait_for_job(job, timeout=600, poll_interval=2)")
     output.append("  get_job_log(client, project_key, job_id)")
+    output.append("  compute_and_apply_schema(client, project_key, recipe_name)  # REQUIRED after creating/modifying recipes")
     output.append("")
 
     output.append("=== helpers.inspection ===")

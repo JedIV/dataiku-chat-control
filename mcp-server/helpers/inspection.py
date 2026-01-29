@@ -47,9 +47,16 @@ def dataset_info(client, project_key: str, dataset_name: str,
         pass
 
     try:
-        # Get sample rows
-        rows = list(dataset.iter_rows(limit=sample_size))
-        sample = rows
+        # Get sample rows (iter_rows doesn't support limit param)
+        sample = []
+        for i, row in enumerate(dataset.iter_rows()):
+            if i >= sample_size:
+                break
+            # Convert list to dict if needed
+            if isinstance(row, dict):
+                sample.append(row)
+            else:
+                sample.append(dict(zip([c[0] for c in columns], row)))
     except:
         pass
 
