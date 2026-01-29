@@ -14,6 +14,7 @@ import sys
 import os
 from io import StringIO
 from pathlib import Path
+from textwrap import dedent
 
 # Add paths for imports
 server_dir = Path(__file__).parent
@@ -27,48 +28,80 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv(parent_dir / ".env")
 
+# Check for required credentials
+_dataiku_url = os.environ.get("DATAIKU_URL")
+_dataiku_api_key = os.environ.get("DATAIKU_API_KEY")
+_credentials_missing = not _dataiku_url or not _dataiku_api_key
+
 # Import after path setup
 from client import get_client
 import helpers
 from helpers import jobs, inspection, search, export
 
+# Build instructions based on credential status
+if _credentials_missing:
+    _instructions = dedent("""
+    ⚠️  DATAIKU CREDENTIALS NOT CONFIGURED
+
+    The Dataiku MCP server requires DATAIKU_URL and DATAIKU_API_KEY to be set.
+
+    To configure, edit your Claude Code MCP settings (~/.claude/mcp_settings.json):
+
+    {
+      "mcpServers": {
+        "dataiku": {
+          "command": "python",
+          "args": ["/path/to/mcp-server/server.py"],
+          "env": {
+            "DATAIKU_URL": "https://your-instance.dataiku.com",
+            "DATAIKU_API_KEY": "your-api-key-here"
+          }
+        }
+      }
+    }
+
+    To get an API key in Dataiku: Profile → API Keys → Create New API Key
+
+    After updating, restart Claude Code for changes to take effect.
+    """).strip()
+else:
+    _instructions = dedent("""
+    Dataiku DSS control server. Use the execute_python tool to run Python code
+    with a pre-configured Dataiku client.
+
+    Available in the execution namespace:
+    - client: Authenticated DSSClient instance
+    - helpers.jobs: Build/scenario waiting (build_and_wait, run_scenario_and_wait, compute_and_apply_schema)
+    - helpers.inspection: Data exploration (dataset_info, project_summary)
+    - helpers.search: Cross-project search (find_datasets, find_by_connection)
+    - helpers.export: Data extraction (to_records, sample, head)
+
+    Example:
+        # List all projects
+        print(client.list_project_keys())
+
+        # Get project summary
+        from helpers.inspection import project_summary
+        print(project_summary(client, "MY_PROJECT"))
+
+        # Build a dataset and wait
+        from helpers.jobs import build_and_wait
+        result = build_and_wait(client, "MY_PROJECT", "my_dataset")
+        print(result)
+
+    IMPORTANT: After creating or modifying a recipe, you MUST compute and apply schema
+    before building, or the build will fail with missing column errors:
+        from helpers.jobs import compute_and_apply_schema
+        compute_and_apply_schema(client, "PROJECT", "recipe_name")
+
+    IMPORTANT: When joining datasets, output columns get prefixed with the input dataset
+    name and double underscore. For example, joining 'crm' and 'web' datasets:
+    - 'web.ip' becomes 'web__ip' (double underscore)
+    - 'crm.customer_id' stays 'customer_id' (left table keeps original names)
+    """).strip()
+
 # Initialize MCP server
-mcp = FastMCP(
-    "dataiku",
-    instructions="""Dataiku DSS control server. Use the execute_python tool to run Python code
-with a pre-configured Dataiku client.
-
-Available in the execution namespace:
-- client: Authenticated DSSClient instance
-- helpers.jobs: Build/scenario waiting (build_and_wait, run_scenario_and_wait, compute_and_apply_schema)
-- helpers.inspection: Data exploration (dataset_info, project_summary)
-- helpers.search: Cross-project search (find_datasets, find_by_connection)
-- helpers.export: Data extraction (to_records, sample, head)
-
-Example:
-    # List all projects
-    print(client.list_project_keys())
-
-    # Get project summary
-    from helpers.inspection import project_summary
-    print(project_summary(client, "MY_PROJECT"))
-
-    # Build a dataset and wait
-    from helpers.jobs import build_and_wait
-    result = build_and_wait(client, "MY_PROJECT", "my_dataset")
-    print(result)
-
-IMPORTANT: After creating or modifying a recipe, you MUST compute and apply schema
-before building, or the build will fail with missing column errors:
-    from helpers.jobs import compute_and_apply_schema
-    compute_and_apply_schema(client, "PROJECT", "recipe_name")
-
-IMPORTANT: When joining datasets, output columns get prefixed with the input dataset
-name and double underscore. For example, joining 'crm' and 'web' datasets:
-- 'web.ip' becomes 'web__ip' (double underscore)
-- 'crm.customer_id' stays 'customer_id' (left table keeps original names)
-"""
-)
+mcp = FastMCP("dataiku", instructions=_instructions)
 
 # Initialize the Dataiku client
 _client = None
@@ -110,6 +143,22 @@ def execute_python(code: str) -> str:
     Returns:
         stdout output from the code, or error message if execution fails
     """
+    # Check for credentials
+    if _credentials_missing:
+        return dedent("""
+        ERROR: Dataiku credentials not configured.
+
+        Please add DATAIKU_URL and DATAIKU_API_KEY to your MCP server config.
+
+        Edit ~/.claude/mcp_settings.json and add to the "dataiku" server:
+          "env": {
+            "DATAIKU_URL": "https://your-instance.dataiku.com",
+            "DATAIKU_API_KEY": "your-api-key"
+          }
+
+        Then restart Claude Code.
+        """).strip()
+
     # Ensure client is in namespace
     execution_globals["client"] = get_dataiku_client()
 
