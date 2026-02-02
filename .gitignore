@@ -1,9 +1,7 @@
-# Environment and secrets
-.env
-.env.local
+# Secrets
+.dataiku-instances.json
 *.pem
 *.key
-.dataiku-instances.json
 
 # Python
 __pycache__/

@@ -1,193 +1,51 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code when working with this repository.
 
 ## Project Purpose
 
-This project enables Claude Code to control Dataiku DSS through the Python API. The goal is to perform administrative and user actions via chat, including:
-- Adjusting admin settings
-- Building and deploying projects
-- Managing datasets, recipes, and scenarios
-- User and group management
-- Any operation available through the Dataiku API
+This project enables Claude Code to control Dataiku DSS through an MCP server. The MCP server provides a `client` object and helper functions for interacting with Dataiku.
 
-## Architecture
+## Using Dataiku
 
-Claude Code writes and executes Python scripts that call the Dataiku API (`dataiku-api-client` package) to perform actions on the configured Dataiku instance.
+Use the `mcp__dataiku__execute_python` tool to run Python code. The execution environment includes:
 
-```
-User Request → Claude Code → Python Script → dataikuapi → Dataiku DSS Instance
-```
+- `client` - Authenticated DSSClient for the current instance
+- `helpers.jobs` - Build and run operations
+- `helpers.inspection` - Dataset and project info
+- `helpers.search` - Find datasets, recipes, etc.
+- `helpers.export` - Export data as records
 
-### Key Files
-- `client.py` - Provides `get_client()` function that returns a configured `DSSClient`
-- `.env` - Contains credentials (gitignored, never commit)
-- `.env.example` - Template showing required environment variables
+### Examples
 
-## Setup
-
-```bash
-# Set Python version and create virtual environment
-pyenv local 3.10.14
-python -m venv venv
-
-# Activate and install dependencies
-source venv/bin/activate  # or: ./venv/bin/pip install -r requirements.txt
-pip install -r requirements.txt
-```
-
-Required environment variables in `.env`:
-- `DATAIKU_URL` - Base URL of Dataiku instance (e.g., `https://instance.dataiku.com`)
-- `DATAIKU_API_KEY` - API key with appropriate permissions
-
-## Common Commands
-
-```bash
-# Test connection
-./venv/bin/python client.py
-
-# Run any script
-./venv/bin/python <script.py>
-```
-
-## Using the Dataiku API
-
-### Basic Pattern
 ```python
-from client import get_client
-
-client = get_client()
-
 # List projects
-projects = client.list_project_keys()
+print(client.list_project_keys())
 
-# Get a specific project
-project = client.get_project("PROJECT_KEY")
+# Get project summary
+from helpers.inspection import project_summary
+print(project_summary(client, "PROJECT_KEY"))
 
-# Access datasets, recipes, scenarios from the project
-datasets = project.list_datasets()
+# Build a dataset
+from helpers.jobs import build_and_wait
+build_and_wait(client, "PROJECT_KEY", "dataset_name")
 ```
 
-### Key API Objects
+### Multi-Instance Support
 
-| Object | Access Pattern | Common Operations |
-|--------|---------------|-------------------|
-| Project | `client.get_project(key)` | list_datasets, list_recipes, list_scenarios |
-| Dataset | `project.get_dataset(name)` | get_settings, read data, write data |
-| Recipe | `project.get_recipe(name)` | get_settings, run |
-| Scenario | `project.get_scenario(id)` | run, get_status |
-| Admin | `client.get_general_settings()` | system configuration |
-| Users | `client.list_users()` | user management |
+Use `mcp__dataiku__use_instance` to switch between configured instances.
+Use `mcp__dataiku__list_instances` to see available instances.
 
-### Admin Operations
+## Important: Schema Updates
+
+After creating or modifying a recipe, you **must** compute and apply schema before building:
+
 ```python
-# Get general settings
-settings = client.get_general_settings()
-
-# List all users
-users = client.list_users()
-
-# Create a user
-client.create_user(login, password, display_name)
-
-# List code environments
-envs = client.list_code_envs()
+from helpers.jobs import compute_and_apply_schema
+compute_and_apply_schema(client, "PROJECT", "recipe_name")
 ```
 
 ## API Documentation
 
-- **Developer Guide**: https://developer.dataiku.com/latest/index.html
-- **Python API Reference**: https://developer.dataiku.com/latest/api-reference/python/client.html
-- **GitHub Source**: https://github.com/dataiku/dataiku-api-client-python
-
-## Creating External (Unmanaged) Datasets
-
-When creating datasets that read from existing tables in a SQL connection (Snowflake, etc.), you must use the proper API methods. **Do not** manually set `managed=False` on a dataset - this creates a broken state where the dataset shows with a dotted border in the flow.
-
-**Reference**: https://developer.dataiku.com/latest/concepts-and-examples/datasets/datasets-other.html#programmatic-creation-and-setup-external-datasets
-
-**Correct approach:**
-```python
-project = client.get_project("PROJECT_KEY")
-
-# Create the dataset using create_sql_table_dataset
-dataset = project.create_sql_table_dataset(
-    dataset_name="my_dataset",
-    type="Snowflake",
-    connection="my_connection",
-    table="TABLE_NAME",
-    schema="SCHEMA_NAME"
-)
-
-# IMPORTANT: Run autodetect_settings and save
-settings = dataset.autodetect_settings()
-settings.save()
-```
-
-The `autodetect_settings()` call is essential - it properly initializes the schema and status from the source table.
-
-## Workflow for Claude Code
-
-When asked to perform a Dataiku action:
-
-1. Import the client: `from client import get_client`
-2. Create client instance: `client = get_client()`
-3. Navigate to the appropriate API object (project, dataset, etc.)
-4. Perform the operation
-5. Return results or confirmation
-
-For exploratory tasks, print intermediate results to understand the current state before making changes.
-
-## Skills (Reusable Scripts)
-
-### Create Dataset (`create_dataset.py`)
-
-Create a managed dataset with CSV data.
-
-```bash
-# From a CSV file
-./venv/bin/python create_dataset.py PROJECT_KEY dataset_name data.csv
-
-# From JSON
-./venv/bin/python create_dataset.py PROJECT_KEY dataset_name '{"columns": ["id", "name"], "rows": [[1, "Alice"], [2, "Bob"]]}'
-```
-
-**Python usage:**
-```python
-from create_dataset import create_dataset_from_records
-
-records = [
-    {"id": 1, "name": "Alice", "email": "alice@example.com"},
-    {"id": 2, "name": "Bob", "email": "bob@example.com"},
-]
-create_dataset_from_records("PROJECT_KEY", "my_dataset", records)
-```
-
-### Import SQL Table (`import_sql_table.py`)
-
-Import a table from a SQL connection (Snowflake, etc.) with automatic schema detection.
-
-```bash
-# Import with auto-generated name
-./venv/bin/python import_sql_table.py PROJECT_KEY sf-azure CRM CUSTOMERS
-
-# Import with custom dataset name
-./venv/bin/python import_sql_table.py PROJECT_KEY sf-azure CRM CUSTOMERS my_customers
-```
-
-**Python usage:**
-```python
-from import_sql_table import list_schemas, list_tables, import_table, get_dataset_info
-
-# Explore available schemas and tables
-schemas = list_schemas("sf-azure", "PROJECT_KEY")
-tables = list_tables("sf-azure", "CRM", "PROJECT_KEY")
-
-# Import a table
-import_table("PROJECT_KEY", "sf-azure", "CRM", "CUSTOMERS", "my_customers")
-
-# Get dataset info
-info = get_dataset_info("PROJECT_KEY", "my_customers")
-print(info['columns'])  # [(name, type), ...]
-print(info['sample'])   # [row_dict, ...]
-```
+- [Developer Guide](https://developer.dataiku.com/latest/index.html)
+- [Python API Reference](https://developer.dataiku.com/latest/api-reference/python/client.html)
