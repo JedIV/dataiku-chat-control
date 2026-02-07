@@ -20,11 +20,14 @@ cd mcp-server
 pip install -r requirements.txt
 ```
 
-Ensure the parent directory has a `.env` file with:
+Configure instances in the parent directory (repo root) by creating
+`.dataiku-instances.json` (copy from the example):
+
+```bash
+cp ../.dataiku-instances.example.json ../.dataiku-instances.json
 ```
-DATAIKU_URL=https://your-instance.dataiku.com
-DATAIKU_API_KEY=your-api-key
-```
+
+Edit `../.dataiku-instances.json` with your instance details.
 
 ## Usage with Claude Code
 
@@ -35,11 +38,7 @@ Add to your Claude Code MCP configuration:
   "mcpServers": {
     "dataiku": {
       "command": "python",
-      "args": ["/path/to/mcp-server/server.py"],
-      "env": {
-        "DATAIKU_URL": "https://your-instance.dataiku.com",
-        "DATAIKU_API_KEY": "your-api-key"
-      }
+      "args": ["/path/to/mcp-server/server.py"]
     }
   }
 }
@@ -54,7 +53,7 @@ Execute Python code with the Dataiku client pre-configured.
 **Available in namespace:**
 - `client` - Authenticated DSSClient instance
 - `helpers.jobs` - Async operation handling
-- `helpers.inspect` - Data exploration
+- `helpers.inspection` - Data exploration
 - `helpers.search` - Cross-project discovery
 - `helpers.export` - Data extraction
 
@@ -64,7 +63,7 @@ Execute Python code with the Dataiku client pre-configured.
 print(client.list_project_keys())
 
 # Get project summary
-from helpers.inspect import project_summary
+from helpers.inspection import project_summary
 print(project_summary(client, "MY_PROJECT"))
 ```
 
