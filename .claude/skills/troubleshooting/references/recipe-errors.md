@@ -117,10 +117,10 @@ Column 'x' not found in schema
 **Solutions:**
 1. List actual columns:
    ```python
-   schema = dataset.get_settings().get_schema()
+   schema = dataset.get_schema()
    print([c["name"] for c in schema["columns"]])
    ```
-2. Update schema: `dataset.autodetect_settings()`
+2. Update schema: `dataset.autodetect_settings().save()`
 
 ### Schema Mismatch After Recipe
 Output schema doesn't match expected.

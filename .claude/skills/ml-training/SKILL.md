@@ -26,15 +26,12 @@ trained_ids = ml_task.train(session_name="My Training Session")
 # Get metrics for each trained model
 for model_id in trained_ids:
     details = ml_task.get_trained_model_details(model_id)
-    raw = details.get_raw()
-    algo = raw['modeling']['algorithm']
-    metrics = raw['perf']['tiMetrics']
+    metrics = details.get_performance_metrics()
+    algo = details.get_modeling_settings()["algorithm"]
     print(f"Model: {algo}")
     print(f"  AUC: {metrics.get('auc')}")
     print(f"  Log Loss: {metrics.get('logLoss')}")
 ```
-
-> **CRITICAL:** Metrics are in `raw['perf']['tiMetrics']` NOT in `trainInfo.testPerf` or `globalMetrics`.
 
 ## Deploy Model to Flow
 
@@ -71,6 +68,6 @@ model_ids = ml_task.get_trained_models_ids()
 
 ## References
 
-- **Model metrics, tiMetrics structure, common metrics table** — see [references/model-metrics.md](references/model-metrics.md)
-- **Algorithm names, enable/disable code** — see [references/algorithm-config.md](references/algorithm-config.md)
+- **Model metrics, get_performance_metrics(), common metrics table** — see [references/model-metrics.md](references/model-metrics.md)
+- **Algorithm names (UPPERCASE), enable/disable, hyperparameters** — see [references/algorithm-config.md](references/algorithm-config.md)
 - **Feature importance, rawImportance, dummy filtering** — see [references/feature-importance.md](references/feature-importance.md)

@@ -34,5 +34,5 @@ export $(grep -v '^#' .env | xargs)
 
 1. **Job logs**: `job.get_log()` or check Dataiku UI
 2. **API methods**: Inspect the installed `dataikuapi` package
-3. **Recipe settings**: `print(settings.get_recipe_raw_params())`
+3. **Recipe settings**: `print(settings.get_recipe_params())`
 4. **Dataset info**: `print(dataset.get_settings().get_raw())`

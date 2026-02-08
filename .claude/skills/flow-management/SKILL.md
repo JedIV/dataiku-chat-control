@@ -18,12 +18,13 @@ Reference patterns for building and orchestrating Dataiku flows via the Python A
 
 ```python
 recipe = project.get_recipe("my_recipe")
-job = recipe.run(no_fail=True)
-status = job.get_status()
-state = status.get("baseStatus", {}).get("state")  # "DONE" or "FAILED"
+job = recipe.run(job_type='NON_RECURSIVE_FORCED_BUILD', partitions=None, wait=True, no_fail=False)
+state = job.get_status()["baseStatus"]["state"]  # "DONE" or "FAILED"
 ```
 
 > `recipe.run()` already waits for completion. Use `no_fail=True` to prevent exceptions on failure.
+
+Note: `job_type` options are `NON_RECURSIVE_FORCED_BUILD` (default), `RECURSIVE_BUILD`, `RECURSIVE_FORCED_BUILD`.
 
 ## Build Multiple Datasets in Dependency Order
 
@@ -134,6 +135,44 @@ for recipe_name in pipeline:
 ```
 
 See [skills/troubleshooting/](../troubleshooting/) for detailed error diagnosis patterns.
+
+## Schema Propagation
+
+When an upstream schema changes, propagate it through the flow:
+
+```python
+flow = project.get_flow()
+propagation = flow.new_schema_propagation("source_dataset")
+future = propagation.start()
+future.wait_for_result()
+```
+
+For more control, use the builder options:
+
+```python
+propagation.set_auto_rebuild(True)
+propagation.stop_at("recipe_name")
+propagation.mark_recipe_as_ok("recipe_name")
+```
+
+## Build Datasets via Project API
+
+For more control than `recipe.run()`, use the project-level job builder:
+
+```python
+job = project.new_job('RECURSIVE_FORCED_BUILD')
+job.with_output('dataset_name', object_type='DATASET')
+result = job.start_and_wait(no_fail=True)
+```
+
+This supports building multiple outputs in one job:
+
+```python
+job = project.new_job('NON_RECURSIVE_FORCED_BUILD')
+job.with_output('dataset_1', object_type='DATASET')
+job.with_output('dataset_2', object_type='DATASET')
+job.start_and_wait()
+```
 
 ## Detailed References
 

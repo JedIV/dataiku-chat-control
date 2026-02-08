@@ -45,22 +45,9 @@ from helpers.jobs import compute_and_apply_schema
 compute_and_apply_schema(client, "PROJECT", "recipe_name")
 ```
 
-## Skills Reference
+## Skills
 
-Before calling `mcp__dataiku__execute_python`, check the `skills/` folder for relevant API patterns. Each skill contains a `SKILL.md` with usage guidance and a `references/` folder with detailed code examples.
-
-Available skills:
-
-| Skill | When to consult |
-|---|---|
-| `recipe-patterns` | Creating or configuring recipes (prepare, join, group, sync, python) |
-| `dataset-management` | Creating datasets, uploading files, managing schemas |
-| `flow-management` | Building datasets, running pipelines, managing dependencies |
-| `ml-training` | Training models, extracting metrics, deploying to flow |
-| `data-catalog` | Working with metadata, tags, meanings, data collections |
-| `troubleshooting` | Debugging failed jobs or diagnosing errors |
-
-**Workflow:** Read the relevant `SKILL.md` first, then consult specific files under `references/` as needed before writing code. This ensures correct API usage and avoids common pitfalls.
+This project includes skills in `.claude/skills/` that are automatically discovered by Claude Code. Each skill contains a `SKILL.md` with usage guidance and a `references/` folder with detailed code examples. Consult the relevant skill and its references before writing Dataiku API code.
 
 ## API Documentation
 

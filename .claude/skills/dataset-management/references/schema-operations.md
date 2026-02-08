@@ -30,10 +30,7 @@ with open("data.csv", "rb") as f:
     dataset.uploaded_add_file(f, "data.csv")
 
 # Auto-detect schema from file contents
-dataset.autodetect_settings()
-
-# Get and save the detected settings
-settings = dataset.get_settings()
+settings = dataset.autodetect_settings()
 settings.save()
 ```
 
@@ -68,8 +65,7 @@ job = recipe.run()
 
 # Update output dataset schema
 output_ds = project.get_dataset("output_dataset")
-output_ds.autodetect_settings()
-output_settings = output_ds.get_settings()
+output_settings = output_ds.autodetect_settings()
 output_settings.save()
 ```
 

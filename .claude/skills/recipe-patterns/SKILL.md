@@ -45,14 +45,23 @@ state = job.get_status()["baseStatus"]["state"]  # "DONE" or "FAILED"
 
 ## Prepare Recipe Quick Reference
 
-Prepare recipes use `raw_steps` to add processors:
+Prepare recipes use `add_processor_step()` (preferred) or `raw_steps.append()` to add processors:
 
 ```python
 settings = recipe.get_settings()
-settings.raw_steps.append({
-    "type": "CreateColumnWithGREL",
-    "params": {"column": "revenue", "expression": "price * quantity"}
+
+# Preferred: add_processor_step(type, params)
+settings.add_processor_step("CreateColumnWithGREL", {
+    "column": "revenue",
+    "expression": "price * quantity"
 })
+
+# Alternative: raw_steps.append() for direct dict manipulation
+# settings.raw_steps.append({
+#     "type": "CreateColumnWithGREL",
+#     "params": {"column": "revenue", "expression": "price * quantity"}
+# })
+
 settings.save()
 ```
 
@@ -108,7 +117,19 @@ for col in raw["schema"]["columns"]:
 ```
 
 ### Job Completion
-`recipe.run()` already waits -- do not look for `wait_for_completion()`:
+`recipe.run()` already waits -- do not look for `wait_for_completion()`.
+
+Full signature:
+```python
+job = recipe.run(job_type='NON_RECURSIVE_FORCED_BUILD', partitions=None, wait=True, no_fail=False)
+```
+
+- `job_type` — Controls build behavior. `'NON_RECURSIVE_FORCED_BUILD'` (default) rebuilds only this recipe; use `'RECURSIVE_FORCED_BUILD'` to rebuild upstream dependencies too.
+- `partitions` — Specify partition identifiers when running on partitioned datasets. Defaults to `None` (all/non-partitioned).
+- `wait` — When `True` (default), blocks until the job completes. Set to `False` for async execution, then poll `job.get_status()` yourself.
+- `no_fail` — When `False` (default), raises an exception if the job fails. Set to `True` to suppress exceptions and inspect the job status manually.
+
+Typical usage:
 ```python
 job = recipe.run(no_fail=True)  # Returns after job completes
 state = job.get_status()["baseStatus"]["state"]  # "DONE" or "FAILED"
