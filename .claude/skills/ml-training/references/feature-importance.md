@@ -46,7 +46,7 @@ for feat, imp in sorted_imp:
 
 ## Feature Importance Structure Reference
 
-The `get_raw()` dict contains these key sections for feature importance (not documented in API reference):
+Feature importance data is in `get_raw()['iperf']['rawImportance']` (no accessor method exists for this):
 
 ```python
 raw = details.get_raw()
@@ -73,9 +73,9 @@ model_ids = ml_task.get_trained_models_ids()
 # Get feature importance for each model
 for model_id in model_ids:
     details = ml_task.get_trained_model_details(model_id)
-    raw = details.get_raw()
-    algo = raw['modeling']['algorithm']
+    algo = details.get_modeling_settings()["algorithm"]
 
+    raw = details.get_raw()
     raw_importance = raw.get('iperf', {}).get('rawImportance', {})
     variables = raw_importance.get('variables', [])
     importances = raw_importance.get('importances', [])

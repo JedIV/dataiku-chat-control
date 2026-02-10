@@ -18,33 +18,42 @@ settings = recipe.get_settings()
 # Enable global count (counts rows per group)
 settings.set_global_count_enabled(True)
 
-# Clear default aggregations and set specific ones
-payload = settings.get_json_payload()
-payload["values"] = []
+# Set aggregations per column using the typed API
+settings.set_column_aggregations("AMOUNT", type="double", sum=True, avg=True, min=True, max=True)
+settings.set_column_aggregations("CUSTOMER_ID", type="string", count_distinct=True)
 
-# Add aggregations - each produces an output column
-payload["values"].append({
-    "column": "AMOUNT",
-    "type": "double",
-    "sum": True,      # Output: AMOUNT_sum
-    "avg": True,      # Output: AMOUNT_avg
-    "min": True,      # Output: AMOUNT_min
-    "max": True       # Output: AMOUNT_max
-})
-
-payload["values"].append({
-    "column": "CUSTOMER_ID",
-    "type": "string",
-    "countDistinct": True  # Output: CUSTOMER_ID_distinct
-})
-
-settings.set_json_payload(payload)
 settings.save()
 
 # Apply schema updates to output dataset
 schema_updates = recipe.compute_schema_updates()
 if schema_updates.any_action_required():
     schema_updates.apply()
+```
+
+## set_column_aggregations() Reference
+
+```python
+settings.set_column_aggregations(
+    column,             # Column name (required)
+    type=None,          # Column type: "double", "string", "bigint", etc.
+    min=False,
+    max=False,
+    count=False,
+    count_distinct=False,
+    sum=False,
+    concat=False,
+    stddev=False,
+    avg=False
+)
+```
+
+Returns a dict reference to the column settings. You can modify it for advanced options:
+
+```python
+col_settings = settings.set_column_aggregations("STATUS", type="string", concat=True)
+col_settings["concatDistinct"] = True
+col_settings["concatSeparator"] = ", "
+settings.save()
 ```
 
 ## Output Column Naming Convention
@@ -65,24 +74,24 @@ Grouping recipes produce output columns with specific names:
 
 **Important**: Note that `countDistinct` in the API produces `_distinct` suffix (not `_countDistinct`).
 
-## Available Aggregation Flags
+## Available Aggregations
+
+The `set_column_aggregations()` method supports: `min`, `max`, `count`, `count_distinct`, `sum`, `concat`, `stddev`, `avg`.
+
+For `first`, `last`, `concatDistinct`, and `concatSeparator`, use the raw payload approach:
 
 ```python
-{
+# For aggregations not in set_column_aggregations, use the raw payload
+payload = settings.get_json_payload()
+payload["values"].append({
     "column": "MY_COLUMN",
-    "type": "double",  # or "string", "bigint", etc.
-    "sum": True,
-    "avg": True,
-    "min": True,
-    "max": True,
-    "count": True,         # Count non-null values
-    "countDistinct": True, # Count unique values
-    "stddev": True,
+    "type": "double",
     "first": True,
     "last": True,
-    "concat": True,        # Concatenate string values
-    "concatDistinct": True
-}
+    "orderColumn": "EVENT_DATE"  # Required for first/last
+})
+settings.set_json_payload(payload)
+settings.save()
 ```
 
 ## Type Compatibility for Aggregations

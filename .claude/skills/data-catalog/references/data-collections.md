@@ -54,7 +54,7 @@ dc.add_object({
 ### List Objects
 ```python
 # As DSSDataCollectionItem objects (default)
-items = dc.list_objects(as_type="objects")
+items = dc.list_objects()  # as_type="objects" is the default
 for item in items:
     raw = item.get_raw()  # {"type": "DATASET", "projectKey": "...", "id": "..."}
     ds = item.get_as_dataset()  # Get DSSDataset handle
@@ -65,7 +65,7 @@ dicts = dc.list_objects(as_type="dict")
 
 ### Remove Objects
 ```python
-items = dc.list_objects()
+items = dc.list_objects(as_type="objects")  # Must use "objects" for .get_raw() and .remove()
 for item in items:
     if item.get_raw()["id"] == "UNWANTED_DATASET":
         item.remove()
@@ -93,6 +93,18 @@ settings.permissions = [
     {"group": "data-team", "admin": False, "write": True, "read": True}
 ]
 settings.save()  # Requires admin rights
+```
+
+There is also a `DSSDataCollectionPermissionItem` helper class with static builder methods for constructing permission entries:
+```python
+from dataikuapi.dss.data_collection import DSSDataCollectionPermissionItem
+
+settings.permissions = [
+    DSSDataCollectionPermissionItem.admin_user("alice@example.com"),
+    DSSDataCollectionPermissionItem.contributor_group("data-team"),
+    DSSDataCollectionPermissionItem.reader_user("bob@example.com"),
+]
+settings.save()
 ```
 
 ### Metadata Completeness Checks

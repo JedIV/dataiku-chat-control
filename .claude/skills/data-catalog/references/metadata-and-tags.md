@@ -106,7 +106,7 @@ ds.generate_ai_description(language="english", save_description=True)
 ```
 
 ### Supported Languages
-`dutch`, `english`, `french`, `german`, `portuguese`, `spanish`
+`dutch`, `english`, `french`, `german`, `japanese`, `portuguese`, `spanish`
 
 ### Rate Limits
 - 1000 requests per day per license

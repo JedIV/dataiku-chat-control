@@ -12,7 +12,7 @@ Reference patterns for creating and managing Dataiku datasets via the Python API
 | Type | Use When | Creation Method |
 |------|----------|-----------------|
 | **Managed** | Output of recipes, stored in a connection (SQL, HDFS, etc.) | `project.new_managed_dataset(name)` |
-| **Uploaded** | Importing local files (CSV, Excel, etc.) | `project.create_dataset(name, "UploadedFiles", ...)` |
+| **Uploaded** | Importing local files (CSV, Excel, etc.) | `project.create_upload_dataset(name)` or `project.create_dataset(name, "UploadedFiles", ...)` |
 | **SQL Table** | Pointing to an existing database table | `project.create_dataset(name, "Snowflake", ...)` |
 
 ## Create a Managed Dataset
@@ -37,12 +37,22 @@ ds = project.create_dataset(
     "my_dataset", "UploadedFiles",
     params={"uploadConnection": "filesystem_managed"}
 )
-ds.uploaded_add_file("path/to/data.csv")
+
+with open("path/to/data.csv", "rb") as f:
+    ds.uploaded_add_file(f, "data.csv")
 
 # Auto-detect schema from file contents
-settings = ds.get_settings()
-settings.autodetect_settings(infer_storage_types=True)
+settings = ds.autodetect_settings(infer_storage_types=True)
 settings.save()
+```
+
+**Simpler alternative:** Use `create_upload_dataset` to skip the manual `params` configuration:
+
+```python
+ds = project.create_upload_dataset("my_dataset")
+
+with open("path/to/data.csv", "rb") as f:
+    ds.uploaded_add_file(f, "data.csv")
 ```
 
 ## Common Column Types
@@ -79,10 +89,11 @@ settings.save()
 
 ### Auto-detect Schema
 ```python
-dataset.autodetect_settings()
-settings = dataset.get_settings()
+settings = dataset.autodetect_settings()
 settings.save()
 ```
+
+> **Note:** `autodetect_settings()` is a method on `DSSDataset`, not on `DSSDatasetSettings`. It returns a new settings object with the detected schema applied.
 
 See [references/schema-operations.md](references/schema-operations.md) for join compatibility checks, helper functions, and advanced operations.
 

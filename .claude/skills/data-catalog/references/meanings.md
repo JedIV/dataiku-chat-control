@@ -104,6 +104,15 @@ definition["description"] = "ISO country codes"
 meaning.set_definition(definition)
 ```
 
+## Assign a Meaning to a Column
+```python
+# Assign a meaning to a dataset column
+dataset = project.get_dataset("MY_DATASET")
+schema = dataset.get_schema()
+schema['columns'][2]['meaning'] = "my_meaning_id"
+dataset.set_schema(schema)
+```
+
 ## Detectable Meanings
 
 When `detectable=True`, Dataiku will consider assigning the meaning automatically to columns set to "Auto-detect" during schema inference. This is useful for common patterns like email addresses, phone numbers, or country codes.
